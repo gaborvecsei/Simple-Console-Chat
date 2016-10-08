@@ -1,6 +1,19 @@
+"""
+*****************************************************
+*
+*              Gabor Vecsei
+* Email:       vecseigabor.x@gmail.com
+* Blog:        https://gaborvecsei.wordpress.com/
+* LinkedIn:    www.linkedin.com/in/vecsei-gabor
+* Github:      https://github.com/gaborvecsei
+*
+*****************************************************
+"""
+
 import threading
 import time
 import socket
+import sys
 
 class Server():
 
@@ -16,8 +29,13 @@ class Server():
 		self.socket.bind((self.ipAddr, self.port))
 		self.socket.listen(1)
 		print "[*] Waiting for connection..."
-		self.socketConnection, self.connectionAddress = self.socket.accept()
-		print "[*] Connection created!"
+		try:
+			self.socketConnection, self.connectionAddress = self.socket.accept()
+			print "[*] Connection created!"
+			return True
+		except:
+			self.socket.close()	
+			return False
 
 	def sendMsg(self):
 		while True:
@@ -62,14 +80,21 @@ class Client():
 	def createConnection(self):
 		self.socket = socket.socket()
 		print "Connection to the server"
+		tries = 0
+		maxTries = 5
 		while True:
 			try:
 				self.socket.connect((self.ipAddr, self.port))
 				break
 			except:
 				print "[*] Retrying connection..."
+				tries += 1
+				if tries > maxTries:
+					self.socket.close()
+					return False
 				time.sleep(1)
 		print "[*] Connection matched!"
+		return True
 
 
 	def sendMsg(self):
@@ -106,13 +131,21 @@ class Client():
 if __name__ == "__main__":
 	serverOrClient = raw_input("Server or client (server/client): ")
 	if serverOrClient == "server":
-		server = Server("localhost", 44000)
-		server.createConnection()
-		server.runServer()
+		server = Server("localhost", 1200)
+		isConnected = server.createConnection()
+		if isConnected == True:
+			server.runServer()
+		else:
+			print "Connection timed out"
+			sys.exit(1)
 	elif serverOrClient == "client":
-		client = Client("localhost", 44000)
-		client.createConnection()
-		client.runClient()
+		client = Client("localhost", 1200)
+		isConnected = client.createConnection()
+		if isConnected == True:
+			client.runClient()
+		else:
+			print "Connection timed out"
+			sys.exit(1)
 
 	while True:
 		time.sleep(1)
