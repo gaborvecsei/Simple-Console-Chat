@@ -1,86 +1,118 @@
-import thread
+import threading
 import time
 import socket
-import sys
 
-def receiveMsgServer(socketConnection):
+class Server():
+
+	def __init__(self, ipAddr, port):
+		self.ipAddr = ipAddr
+		self.port = port
+		self.socket = None
+		self.socketConnection = None
+		self.connectionAddress = None
+
+	def createConnection(self):
+		self.socket = socket.socket()
+		self.socket.bind((self.ipAddr, self.port))
+		self.socket.listen(1)
+		print "[*] Waiting for connection..."
+		self.socketConnection, self.connectionAddress = self.socket.accept()
+		print "[*] Connection created!"
+
+	def sendMsg(self):
+		while True:
+			keyboardInput = raw_input("")
+			messageToSend = keyboardInput.encode('utf-8')
+			try:
+				self.socketConnection.send(messageToSend)
+				print "Message sent: {0}".format(messageToSend)
+			except:
+				print "[*] Couldn't send the message!"
+
+	def receiveMsg(self):
+		while True:
+			receivedMsg = self.socketConnection.recv(128)
+			receivedString = receivedMsg.decode('utf-8')
+			print"Received Message: {0}".format(receivedString)
+
+	def runServer(self):
+		sendThread = threading.Thread(target=self.sendMsg)
+		receiveThread = threading.Thread(target=self.receiveMsg)
+
+		sendThread.start()
+		receiveThread.start()
+
+		sendThread.join()
+		receiveThread.join()
+
+	def closeConnection(self):
+		self.socketConnection.close()
+		self.socket.close()
+		self.connectionAddress = None
+
+
+
+class Client():
+
+	def __init__(self, ipAddr, port):
+		self.ipAddr = ipAddr
+		self.port = port
+		self.socket = None
+
+	def createConnection(self):
+		self.socket = socket.socket()
+		print "Connection to the server"
+		while True:
+			try:
+				self.socket.connect((self.ipAddr, self.port))
+				break
+			except:
+				print "[*] Retrying connection..."
+				time.sleep(1)
+		print "[*] Connection matched!"
+
+
+	def sendMsg(self):
+		while True:
+			keyboardInput = raw_input()
+			messageToSend = keyboardInput.encode('utf-8')
+			try:
+				self.socket.send(messageToSend)
+				print "Message sent: {0}".format(messageToSend)
+			except:
+				print "[*] Couldn't send the message!"
+
+	def receiveMsg(self):
+		while True:
+			receivedMsg = self.socket.recv(128)
+			receivedString = receivedMsg.decode('utf-8')
+			print"Received Message: {0}".format(receivedString)
+
+	def runClient(self):
+		sendThread = threading.Thread(target=self.sendMsg)
+		receiveThread = threading.Thread(target=self.receiveMsg)
+
+		sendThread.start()
+		receiveThread.start()
+
+		sendThread.join()
+		receiveThread.join()
+
+	def closeConnection(self):
+		self.socket.close()
+
+
+
+if __name__ == "__main__":
+	serverOrClient = raw_input("Server or client (server/client): ")
+	if serverOrClient == "server":
+		server = Server("localhost", 44000)
+		server.createConnection()
+		server.runServer()
+	elif serverOrClient == "client":
+		client = Client("localhost", 44000)
+		client.createConnection()
+		client.runClient()
+
 	while True:
-		receivedMsg = socketConnection.recv(128)
-		receivedString = receivedMsg.decode('utf-8')
-		if receivedString == "quit":
-			socketConnection.close()
-			sys.exit(0)
-		print"Received Message: {0}".format(receivedString)
-
-def sendMsgServer(sc):
-	while True:
-		keyboardInput = raw_input("")
-		messageToSend = keyboardInput.encode('utf-8')
-		sc.send(messageToSend)
-		print "Message sent!"
-
-def receiveMsgClient(socket):
-	while True:
-		receivedMsg = socket.recv(128)
-		receivedString = receivedMsg.decode('utf-8')
-		if receivedString == "quit":
-			socket.close()
-			sys.exit(0)
-		print"Received Message: {0}".format(receivedString)
-
-def sendMsgClient(socket):
-	while True:
-		keyboardInput = raw_input()
-		messageToSend = keyboardInput.encode('utf-8')
-		socket.send(messageToSend)
-		print "Message sent!"
-
-hostOrClient = raw_input("Are you the host or the client (host/client): ")
-
-ipAddr = raw_input("IP: ")
-portt = raw_input("Port: ")
-
-if hostOrClient == "host":
-	socket = socket.socket()
-	socket.bind((ipAddr, eval(portt)))
-	socket.listen(1)
-	
-	print("Connection Waiting...")
-	socket_connection, addr = socket.accept()
-	print addr
-	print("Connection Matched!")
-	
-	try:
-		thread.start_new_thread(receiveMsgServer, (socket_connection, ))
-	except:
-		print "Unable to start receive thread"
-	
-	try:
-		thread.start_new_thread(sendMsgServer, (socket_connection, ))
-	except:
-		print "Unable to start send thread"
-elif hostOrClient == "client":
-	socket = socket.socket()
-	print("Connecting to server...")
-	while True:
-		try:
-			socket.connect((ipAddr, eval(portt)))
-			break
-		except:
-			print("Retrying connection to server...")
-			time.sleep(1)
-	print("Connection Matched!")
-
-	try:
-		thread.start_new_thread(receiveMsgClient, (socket, ))
-	except:
-		print "Unable to start receive thread"
-
-	try:
-		thread.start_new_thread(sendMsgClient, (socket, ))
-	except:
-		print "Unable to start send thread"
-
-
-while True:
-	time.sleep(1)
+		time.sleep(1)
