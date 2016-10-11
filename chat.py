@@ -7,6 +7,7 @@
 * LinkedIn:    www.linkedin.com/in/vecsei-gabor
 * Github:      https://github.com/gaborvecsei
 *
+* Simple chat program which runs in the console
 *****************************************************
 """
 
@@ -33,8 +34,10 @@ class Server():
 			self.socketConnection, self.connectionAddress = self.socket.accept()
 			print "[*] Connection created!"
 			return True
-		except:
-			self.socket.close()	
+		except socket.error as e:
+			print "[*] Could not connect!"
+			print e
+			self.socket.close()
 			return False
 
 	def sendMsg(self):
@@ -44,8 +47,9 @@ class Server():
 			try:
 				self.socketConnection.send(messageToSend)
 				print "Message sent: {0}".format(messageToSend)
-			except:
+			except socket.error as e:
 				print "[*] Couldn't send the message!"
+				print e
 
 	def receiveMsg(self):
 		while True:
@@ -72,24 +76,24 @@ class Server():
 
 class Client():
 
-	def __init__(self, ipAddr, port):
+	def __init__(self, ipAddr, port, maxConnectionTries = 5):
 		self.ipAddr = ipAddr
 		self.port = port
 		self.socket = None
+		self.maxConnectionTries = maxConnectionTries
 
 	def createConnection(self):
 		self.socket = socket.socket()
 		print "Connection to the server"
 		tries = 0
-		maxTries = 5
 		while True:
 			try:
 				self.socket.connect((self.ipAddr, self.port))
 				break
-			except:
-				print "[*] Retrying connection..."
+			except socket.error as e:
+				print "[*] Retrying connection... " + str(tries)
 				tries += 1
-				if tries > maxTries:
+				if tries > self.maxConnectionTries:
 					self.socket.close()
 					return False
 				time.sleep(1)
@@ -104,8 +108,9 @@ class Client():
 			try:
 				self.socket.send(messageToSend)
 				print "Message sent: {0}".format(messageToSend)
-			except:
+			except socket.error as e:
 				print "[*] Couldn't send the message!"
+				print e
 
 	def receiveMsg(self):
 		while True:
@@ -126,26 +131,35 @@ class Client():
 	def closeConnection(self):
 		self.socket.close()
 
+def main():
+	ipAddr = "localhost"
+	port = 1200
 
-
-if __name__ == "__main__":
 	serverOrClient = raw_input("Server or client (server/client): ")
 	if serverOrClient == "server":
-		server = Server("localhost", 1200)
+		server = Server(ipAddr, port)
 		isConnected = server.createConnection()
-		if isConnected == True:
+		if isConnected:
 			server.runServer()
 		else:
 			print "Connection timed out"
 			sys.exit(1)
 	elif serverOrClient == "client":
-		client = Client("localhost", 1200)
+		client = Client(ipAddr, port)
 		isConnected = client.createConnection()
-		if isConnected == True:
+		if isConnected:
 			client.runClient()
 		else:
 			print "Connection timed out"
 			sys.exit(1)
+	elif serverOrClient == "exit":
+		sys.exit(0)
+	else:
+		main()
 
 	while True:
 		time.sleep(1)
+
+
+if __name__ == "__main__":
+	main()
